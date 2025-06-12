@@ -38,8 +38,10 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               // Ordenar por relevância: começa com > contém > outras correspondências
               final aName = a.name.toLowerCase();
               final bName = b.name.toLowerCase();
-              if (aName.startsWith(query) && !bName.startsWith(query))
+
+              if (aName.startsWith(query) && !bName.startsWith(query)) {
                 return -1;
+              }
               if (!aName.startsWith(query) && bName.startsWith(query)) return 1;
               if (aName.contains(query) && !bName.contains(query)) return -1;
               if (!aName.contains(query) && bName.contains(query)) return 1;
@@ -93,15 +95,11 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.2),
+                    color: Theme.of(context).colorScheme.primary.withAlpha(51),
                   ),
                 ),
                 filled: true,
-                fillColor: Theme.of(
-                  context,
-                ).colorScheme.surface.withOpacity(0.3),
+                fillColor: Theme.of(context).colorScheme.surface.withAlpha(76),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,
