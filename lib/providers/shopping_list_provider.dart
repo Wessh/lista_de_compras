@@ -65,4 +65,22 @@ class ShoppingListProvider with ChangeNotifier {
     list.items.removeWhere((i) => i.id == item.id);
     await updateList(list);
   }
+
+  Future<void> addFrequentItem(Item item) async {
+    final existingItem = _frequentItems.firstWhere(
+      (i) => i.name.toLowerCase() == item.name.toLowerCase(),
+      orElse: () => Item(name: '', id: ''),
+    );
+
+    if (existingItem.name.isEmpty) {
+      final newItem = Item(name: item.name, price: item.price, quantity: 1);
+      await _frequentItemsBox?.add(newItem);
+      _frequentItems.add(newItem);
+      notifyListeners();
+    } else if (existingItem.price != item.price) {
+      existingItem.price = item.price;
+      await existingItem.save();
+      notifyListeners();
+    }
+  }
 }

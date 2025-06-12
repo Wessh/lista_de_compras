@@ -30,17 +30,47 @@ class MyApp extends StatelessWidget {
             primary: Colors.orange,
             secondary: Colors.orange.shade300,
             surface: Colors.grey.shade900,
+            onSurface: Colors.white,
           ),
           appBarTheme: AppBarTheme(
             backgroundColor: Colors.grey.shade900,
             foregroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
           ),
           scaffoldBackgroundColor: Colors.grey.shade900,
-          textTheme: const TextTheme(
+          textTheme: TextTheme(
+            headlineMedium: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
             bodyLarge: TextStyle(color: Colors.white),
             bodyMedium: TextStyle(color: Colors.white),
           ),
-          cardTheme: CardThemeData(color: Colors.grey.shade800),
+          cardTheme: CardThemeData(
+            color: Colors.grey.shade800,
+            elevation: 4,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.grey.shade800,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.orange),
+            ),
+          ),
         ),
         home: const HomeScreen(),
       ),
