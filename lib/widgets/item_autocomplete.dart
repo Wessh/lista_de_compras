@@ -39,8 +39,9 @@ class _ItemAutoCompleteState extends State<ItemAutoComplete> {
             }).toList()..sort((a, b) {
               final aName = a.name.toLowerCase();
               final bName = b.name.toLowerCase();
-              if (aName.startsWith(query) && !bName.startsWith(query))
+              if (aName.startsWith(query) && !bName.startsWith(query)) {
                 return -1;
+              }
               if (!aName.startsWith(query) && bName.startsWith(query)) return 1;
               if (aName.contains(query) && !bName.contains(query)) return -1;
               if (!aName.contains(query) && bName.contains(query)) return 1;

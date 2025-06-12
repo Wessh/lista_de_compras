@@ -16,18 +16,28 @@ class ShoppingList extends HiveObject {
   List<Item> items;
 
   @HiveField(3)
-  double? budgetLimit;
+  double? _budgetLimit;
+
+  double? get budgetLimit => _budgetLimit;
+
+  set budgetLimit(double? value) {
+    if (value != null && value < 0) {
+      throw ArgumentError('O limite de gastos não pode ser negativo');
+    }
+    _budgetLimit = value;
+  }
 
   ShoppingList({
     String? id,
     required this.name,
     List<Item>? items,
-    this.budgetLimit,
-  })  : id = id ?? const Uuid().v4(),
-        items = items ?? [];
+    double? budgetLimit,
+  }) : id = id ?? const Uuid().v4(),
+       items = items ?? [],
+       _budgetLimit = budgetLimit;
 
   double get total => items.fold(0, (sum, item) => sum + item.total);
-  
+
   double get remainingBudget => (budgetLimit ?? double.infinity) - total;
 
   bool get isOverBudget => budgetLimit != null && total > budgetLimit!;

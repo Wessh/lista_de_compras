@@ -69,7 +69,16 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.list.name), elevation: 0),
+      appBar: AppBar(
+        title: Text(widget.list.name),
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _showEditListDialog(context),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           ListHeaderWidget(
@@ -221,6 +230,115 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             }
           });
         },
+      ),
+    );
+  }
+
+  void _showEditListDialog(BuildContext context) {
+    final nameController = TextEditingController(text: widget.list.name);
+    final budgetController = TextEditingController(
+      text: widget.list.budgetLimit?.toStringAsFixed(2) ?? '',
+    );
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        actionsPadding: const EdgeInsets.all(16),
+        title: Row(
+          children: [
+            Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Editar Lista',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Nome da Lista',
+                  prefixIcon: const Icon(Icons.shopping_basket),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Por favor, insira um nome para a lista';
+                  }
+                  return null;
+                },
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: budgetController,
+                decoration: InputDecoration(
+                  labelText: 'Limite de Gastos (opcional)',
+                  prefixIcon: const Icon(Icons.attach_money),
+                  prefixText: 'R\$ ',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final budget = double.tryParse(value.replaceAll(',', '.'));
+                    if (budget == null || budget <= 0) {
+                      return 'Por favor, insira um valor válido';
+                    }
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final provider = context.read<ShoppingListProvider>();
+                final name = nameController.text.trim();
+                double? budget;
+
+                if (budgetController.text.isNotEmpty) {
+                  budget = double.parse(
+                    budgetController.text.replaceAll(',', '.'),
+                  );
+                }
+
+                setState(() {
+                  widget.list.name = name;
+                  widget.list.budgetLimit = budget;
+                  provider.updateList(widget.list);
+                });
+
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
       ),
     );
   }
