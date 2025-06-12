@@ -14,15 +14,9 @@ class ShoppingListScreen extends StatefulWidget {
 }
 
 class _ShoppingListScreenState extends State<ShoppingListScreen> {
-  TextEditingController _itemController = TextEditingController();
-  FocusNode _itemFocusNode = FocusNode();
-
-  @override
-  void dispose() {
-    _itemController.dispose();
-    _itemFocusNode.dispose();
-    super.dispose();
-  }
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  TextEditingController? _currentController;
+  FocusNode? _currentFocusNode;
 
   Widget _buildAddItemField() {
     return Consumer<ShoppingListProvider>(
@@ -37,7 +31,19 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               final itemName = item.name.toLowerCase();
               if (itemName.startsWith(query)) return true;
               final queryWords = query.split(' ');
+              // Melhorar a relevância dos resultados
+              if (itemName.contains(query)) return true;
               return queryWords.every((word) => itemName.contains(word));
+            }).toList()..sort((a, b) {
+              // Ordenar por relevância: começa com > contém > outras correspondências
+              final aName = a.name.toLowerCase();
+              final bName = b.name.toLowerCase();
+              if (aName.startsWith(query) && !bName.startsWith(query))
+                return -1;
+              if (!aName.startsWith(query) && bName.startsWith(query)) return 1;
+              if (aName.contains(query) && !bName.contains(query)) return -1;
+              if (!aName.contains(query) && bName.contains(query)) return 1;
+              return aName.compareTo(bName);
             });
           },
           displayStringForOption: (Item item) => item.name,
@@ -55,60 +61,161 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 name: selectedItem.name,
                 price: selectedItem.price,
                 quantity: 1,
+                unit: selectedItem.unit ?? 'un',
               );
               setState(() {
+                final insertIndex = widget.list.items.length;
                 widget.list.items.add(newItem);
+                _listKey.currentState?.insertItem(insertIndex);
                 final provider = context.read<ShoppingListProvider>();
                 provider.updateList(widget.list);
               });
             }
-            _itemController.clear();
-            _itemFocusNode.requestFocus();
           },
           fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-            _itemController = controller;
-            _itemFocusNode = focusNode;
+            _currentController = controller;
+            _currentFocusNode = focusNode;
             return TextField(
               controller: controller,
               focusNode: focusNode,
               decoration: InputDecoration(
                 hintText: 'Adicionar item...',
                 prefixIcon: const Icon(Icons.add_shopping_cart),
+                suffixIcon: controller.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          controller.clear();
+                          focusNode.requestFocus();
+                        },
+                      )
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
+              style: const TextStyle(fontSize: 16),
               onSubmitted: (value) {
                 if (value.isNotEmpty) {
-                  _addItem();
+                  final name = value.trim();
+                  final existingItem = widget.list.items.firstWhere(
+                    (item) => item.name.toLowerCase() == name.toLowerCase(),
+                    orElse: () => Item(name: '', id: ''),
+                  );
+
+                  if (existingItem.name.isNotEmpty) {
+                    _updateItemQuantity(
+                      existingItem,
+                      existingItem.quantity + 1,
+                    );
+                  } else {
+                    final newItem = Item(name: name, quantity: 1, unit: 'un');
+                    setState(() {
+                      final insertIndex = widget.list.items.length;
+                      widget.list.items.add(newItem);
+                      _listKey.currentState?.insertItem(insertIndex);
+                      final provider = context.read<ShoppingListProvider>();
+                      provider.updateList(widget.list);
+                    });
+                  }
+                  controller.clear();
+                  focusNode.requestFocus();
                 }
               },
             );
           },
           optionsViewBuilder: (context, onSelected, options) {
+            if (options.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
             return Align(
               alignment: Alignment.topLeft,
               child: Material(
-                elevation: 4,
+                elevation: 8,
+                shadowColor: Colors.black26,
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  child: ListView.builder(
+                clipBehavior: Clip.antiAlias,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                    maxWidth: MediaQuery.of(context).size.width * 0.9,
+                  ),
+                  child: ListView.separated(
                     padding: EdgeInsets.zero,
                     shrinkWrap: true,
                     itemCount: options.length,
+                    separatorBuilder: (context, index) =>
+                        Divider(height: 1, color: Colors.grey.shade800),
                     itemBuilder: (context, index) {
                       final option = options.elementAt(index);
-                      return ListTile(
-                        title: Text(option.name),
-                        subtitle: option.price != null
-                            ? Text(
-                                'R\$ ${option.price!.toStringAsFixed(2)}',
-                                style: TextStyle(color: Colors.grey.shade400),
-                              )
-                            : null,
-                        onTap: () => onSelected(option),
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => onSelected(option),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.shopping_bag_outlined,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        option.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      if (option.price != null)
+                                        Text(
+                                          'R\$ ${option.price!.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.8),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.add_circle_outline, size: 20),
+                              ],
+                            ),
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -251,6 +358,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                   }
 
                   return AnimatedList(
+                    key: _listKey,
                     padding: const EdgeInsets.all(16),
                     initialItemCount: items.length,
                     itemBuilder: (context, index, animation) {
@@ -298,30 +406,57 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   void _addItem() {
-    final name = _itemController.text.trim();
-    if (name.isEmpty) return;
+    if (_currentController != null && _currentController!.text.isNotEmpty) {
+      final name = _currentController!.text.trim();
+      final existingItem = widget.list.items.firstWhere(
+        (item) => item.name.toLowerCase() == name.toLowerCase(),
+        orElse: () => Item(name: '', id: ''),
+      );
 
-    final existingItem = widget.list.items.firstWhere(
-      (item) => item.name.toLowerCase() == name.toLowerCase(),
-      orElse: () => Item(name: '', id: ''),
-    );
-
-    if (existingItem.name.isNotEmpty) {
-      _updateItemQuantity(existingItem, existingItem.quantity + 1);
-    } else {
-      _showPriceAndQuantityDialog(name);
+      if (existingItem.name.isNotEmpty) {
+        _updateItemQuantity(existingItem, existingItem.quantity + 1);
+      } else {
+        final newItem = Item(name: name, quantity: 1, unit: 'un');
+        setState(() {
+          final insertIndex = widget.list.items.length;
+          widget.list.items.add(newItem);
+          _listKey.currentState?.insertItem(insertIndex);
+          final provider = context.read<ShoppingListProvider>();
+          provider.updateList(widget.list);
+        });
+      }
+      _currentController?.clear();
+      _currentFocusNode?.requestFocus();
     }
-
-    _itemController.clear();
-    _itemFocusNode.requestFocus();
   }
 
   void _removeItem(Item item) {
     final provider = context.read<ShoppingListProvider>();
-    setState(() {
-      widget.list.items.remove(item);
-      provider.updateList(widget.list);
-    });
+    final index = widget.list.items.indexOf(item);
+    if (index >= 0) {
+      setState(() {
+        widget.list.items.removeAt(index);
+        _listKey.currentState?.removeItem(
+          index,
+          (context, animation) => SlideTransition(
+            position: animation.drive(
+              Tween(begin: const Offset(1, 0), end: const Offset(0, 0)),
+            ),
+            child: FadeTransition(
+              opacity: animation,
+              child: ShoppingListItemTile(
+                item: item,
+                onTap: () => _showEditItemDialog(item),
+                onUpdateQuantity: (quantity) =>
+                    _updateItemQuantity(item, quantity),
+                onDelete: () => _removeItem(item),
+              ),
+            ),
+          ),
+        );
+        provider.updateList(widget.list);
+      });
+    }
   }
 
   void _updateItemQuantity(Item item, int quantity) {
@@ -330,89 +465,6 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       item.quantity = quantity;
       provider.updateList(widget.list);
     });
-  }
-
-  void _showPriceAndQuantityDialog(String name) {
-    final priceController = TextEditingController();
-    final quantityController = TextEditingController(text: '1');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              Icons.shopping_cart,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 12),
-            const Text('Detalhes do Item'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              name,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: priceController,
-              decoration: InputDecoration(
-                labelText: 'Preço Unitário',
-                prefixText: 'R\$ ',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: quantityController,
-              decoration: InputDecoration(
-                labelText: 'Quantidade',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final price = double.tryParse(
-                priceController.text.replaceAll(',', '.'),
-              );
-              final quantity = int.tryParse(quantityController.text) ?? 1;
-
-              final provider = context.read<ShoppingListProvider>();
-              final item = Item(name: name, price: price, quantity: quantity);
-
-              setState(() {
-                widget.list.items.add(item);
-                if (price != null) {
-                  provider.addFrequentItem(item);
-                }
-                provider.updateList(widget.list);
-              });
-
-              Navigator.pop(context);
-            },
-            child: const Text('Adicionar'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showEditItemDialog(Item item) {
@@ -424,86 +476,128 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       text: item.quantity.toString(),
     );
 
+    final units = ['kg', 'g', 'L', 'ml', 'un'];
+    String? selectedUnit = item.unit;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 12),
-            const Text('Editar Item'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 12),
+              const Text('Editar Item'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Nome do Item',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: priceController,
+                decoration: InputDecoration(
+                  labelText: 'Preço Unitário',
+                  prefixText: 'R\$ ',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: quantityController,
+                      decoration: InputDecoration(
+                        labelText: 'Quantidade',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButtonFormField<String>(
+                      value: selectedUnit,
+                      decoration: InputDecoration(
+                        labelText: 'Unidade',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Selecionar'),
+                        ),
+                        ...units.map(
+                          (unit) =>
+                              DropdownMenuItem(value: unit, child: Text(unit)),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          selectedUnit = value;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                if (name.isEmpty) return;
+
+                final price = double.tryParse(
+                  priceController.text.replaceAll(',', '.'),
+                );
+                final quantity = int.tryParse(quantityController.text) ?? 1;
+
+                final provider = context.read<ShoppingListProvider>();
+                setState(() {
+                  item.name = name;
+                  item.price = price;
+                  item.quantity = quantity;
+                  item.unit = selectedUnit;
+                  provider.updateList(widget.list);
+                  if (price != null) {
+                    provider.addFrequentItem(item);
+                  }
+                });
+
+                Navigator.pop(context);
+              },
+              child: const Text('Salvar'),
+            ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: 'Nome do Item',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: priceController,
-              decoration: InputDecoration(
-                labelText: 'Preço Unitário',
-                prefixText: 'R\$ ',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: quantityController,
-              decoration: InputDecoration(
-                labelText: 'Quantidade',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              if (name.isEmpty) return;
-
-              final price = double.tryParse(
-                priceController.text.replaceAll(',', '.'),
-              );
-              final quantity = int.tryParse(quantityController.text) ?? 1;
-
-              final provider = context.read<ShoppingListProvider>();
-              setState(() {
-                item.name = name;
-                item.price = price;
-                item.quantity = quantity;
-                provider.updateList(widget.list);
-                if (price != null) {
-                  provider.addFrequentItem(item);
-                }
-              });
-
-              Navigator.pop(context);
-            },
-            child: const Text('Salvar'),
-          ),
-        ],
       ),
     );
   }
@@ -556,28 +650,27 @@ class ShoppingListItemTile extends StatelessWidget {
                           style: TextStyle(color: Colors.grey.shade400),
                         )
                       : null,
-                  trailing: item.price != null
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove_circle_outline),
-                              onPressed: item.quantity > 1
-                                  ? () => onUpdateQuantity(item.quantity - 1)
-                                  : null,
-                            ),
-                            Text(
-                              '${item.quantity}',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add_circle_outline),
-                              onPressed: () =>
-                                  onUpdateQuantity(item.quantity + 1),
-                            ),
-                          ],
-                        )
-                      : null,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        onPressed: item.quantity > 1
+                            ? () => onUpdateQuantity(item.quantity - 1)
+                            : null,
+                      ),
+                      Text(
+                        item.unit != null
+                            ? '${item.quantity} ${item.unit}'
+                            : '${item.quantity}',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        onPressed: () => onUpdateQuantity(item.quantity + 1),
+                      ),
+                    ],
+                  ),
                   onTap: onTap,
                 ),
               ),

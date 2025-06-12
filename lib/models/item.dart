@@ -20,12 +20,16 @@ class Item extends HiveObject {
   @HiveField(4)
   bool isFrequent;
 
+  @HiveField(5)
+  String? unit;
+
   Item({
     String? id,
     required this.name,
     this.price,
     this.quantity = 1,
     this.isFrequent = false,
+    this.unit,
   }) : id = id ?? const Uuid().v4();
 
   double get total => (price ?? 0) * quantity;
@@ -35,6 +39,7 @@ class Item extends HiveObject {
     double? price,
     int? quantity,
     bool? isFrequent,
+    String? unit,
   }) {
     return Item(
       id: id,
@@ -42,6 +47,7 @@ class Item extends HiveObject {
       price: price ?? this.price,
       quantity: quantity ?? this.quantity,
       isFrequent: isFrequent ?? this.isFrequent,
+      unit: unit ?? this.unit,
     );
   }
 }
