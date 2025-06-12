@@ -109,9 +109,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.primary.withAlpha(125),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
