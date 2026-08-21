@@ -1,16 +1,61 @@
-# lista_compras
+# Lista compras
 
-A new Flutter project.
+Aplicativo mobile desenvolvido como projeto de estudo.
 
-## Getting Started
+## Problema
 
-This project is a starting point for a Flutter application.
+Gerir os gastos nas compras sem que ultrapassem o teto de gastos.
 
-A few resources to get you started if this is your first Flutter project:
+## Solução
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Desenvolvimento de um aplicativo que facilita o controle da lista de compras, permitindo que adicione um teto de gasto e um preço a cada item adicionado.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Funcionalidades
+
+- Cadastro de lista
+- Edição de lista
+- Remoção de lista
+- Consulta de lista
+- Adicionar item em uma lista
+- Edição de item da lista
+- Remoção de item da lista
+
+## Screenshots
+
+<p align="center">
+  <img src="./assets/screenshots/Home.jpg" alt="Tela inicial" width="250"/>
+  <img src="./assets/screenshots/Add_List.jpg" alt="Adicionar Lista" width="250"/>
+  <img src="./assets/screenshots/List_Page.jpg" alt="Página da Lista" width="250"/>
+  <img src="./assets/screenshots/Edit_Item.jpg" alt="Editar item da lista" width="250"/>
+</p>
+
+## Tecnologias
+
+- Flutter
+- Hive
+
+## Como executar
+
+### Limpar os arquivos de builds
+
+ ```sh
+ flutter clean
+ ```
+
+### Baixar e resolver as dependências
+
+```sh
+flutter pub get
+```
+
+### Rodar o projeto no dispositivo
+
+```sh
+flutter run
+```
+
+### Requisitos
+
+- flutter
+- Android Studio
+- Android SDK
