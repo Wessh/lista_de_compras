@@ -25,7 +25,7 @@ Desenvolvimento de um aplicativo que facilita o controle da lista de compras, pe
 <p align="center">
   <img src="./assets/screenshots/Home.jpg" alt="Tela inicial" width="250"/>
   <img src="./assets/screenshots/Add_List.jpg" alt="Adicionar Lista" width="250"/>
-  <img src="./assets/screenshots/List_Page.jpg" alt="Página da Lista" width="250"/>
+  <img src="./assets/screenshots/List_page.jpg" alt="Página da Lista" width="250"/>
   <img src="./assets/screenshots/Edit_Item.jpg" alt="Editar item da lista" width="250"/>
 </p>
 
